@@ -426,9 +426,20 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             case 'w':
                 return "微信";
             case 'p':
-                return "PDF Reader";
+                return "图库";
             case 'd':
                 return "豆瓣";
+            case 'q':   // qgy
+                return "网易云音乐";
+            case 'e':   // ez
+                return "知乎";
+            case 'b':
+                return "手机百度";
+            case 'm':
+                return "美团外卖";
+            case 'c':
+                return "Chrome";
+
             default:
                 return null;
         }
