@@ -397,7 +397,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         char topLetter = crs.get(0).getLetters().charAt(0);
         String appname = getAppname(topLetter);
         if(appname != null) {
-            PInfo pInfo = getPInfo(getAppname(topLetter));
+            PInfo pInfo = getPInfo(appname);
 
             if (toast != null) {
                 toast.cancel();
@@ -425,8 +425,8 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         switch (c){
             case 'w':
                 return "微信";
-            case 'p':
-                return "图库";
+            case 'f':
+                return "支付宝";
             case 'd':
                 return "豆瓣";
             case 'q':   // qgy
@@ -505,9 +505,11 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             PInfo newInfo = new PInfo();
             newInfo.appname = p.applicationInfo.loadLabel(getPackageManager()).toString();
             newInfo.pname = p.packageName;
-            newInfo.versionName = p.versionName;
-            newInfo.icon = p.applicationInfo.loadIcon(getPackageManager());
-            res.add(newInfo);
+            if (newInfo.appname != newInfo.pname && p.applicationInfo.icon != 0) {
+                newInfo.versionName = p.versionName;
+                newInfo.icon = p.applicationInfo.loadIcon(getPackageManager());
+                res.add(newInfo);
+            }
         }
         return res;
     }
@@ -536,7 +538,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             }
         };
         Timer timer = new Timer();
-        timer.schedule(task, 1000);
+        timer.schedule(task, 700);
         if (toast != null)
             toast.cancel();
         readyToOpen = true;

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">App Launcher 1D</string>
+    <string name="app_name">Launcher 1D</string>
 
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
