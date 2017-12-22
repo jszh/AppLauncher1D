@@ -412,7 +412,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         ArrayList<CostRecord> crs = chars.get(chars.size() - 1);
         if(!crs.isEmpty()) {
             char topChar = crs.get(0).getLetters().charAt(0);
-            Log.v(TAG, "Top Letter:" + topChar);
+            Log.v(TAG, "Top Letter: " + topChar);
 
             switch (topChar){
                 case 'w':
