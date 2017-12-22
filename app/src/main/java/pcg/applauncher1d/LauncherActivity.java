@@ -18,11 +18,16 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static android.content.ContentValues.TAG;
 
@@ -61,6 +66,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     private Point lastDrawnPoint = new Point(0, 0);
     private double virtualT = 0;
 
+    boolean readyToOpen = false;
     private boolean newSegment = true;
     private boolean pathDidStart = false;
     private boolean didDraw = false;
@@ -411,22 +417,28 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     private void openApp() {
         ArrayList<CostRecord> crs = chars.get(chars.size() - 1);
         if(!crs.isEmpty()) {
-            char topChar = crs.get(0).getLetters().charAt(0);
-            Log.v(TAG, "Top Letter: " + topChar);
+            char topLetter = crs.get(0).getLetters().charAt(0);
+            Log.v(TAG, "Top Letter: " + topLetter);
 
-            switch (topChar){
-                case 'w':
-                    launchActivityFromPackage(getPInfo("微信"));
-                    break;
-                case 'p':
-                    launchActivityFromPackage(getPInfo("PDF Reader"));
-                    break;
-                case 'd':
-                    launchActivityFromPackage(getPInfo("豆瓣"));
-                    break;
-                default:
-                    break;
+            if (readyToOpen == false) {
+                switch (topLetter){
+                    case 'w':
+                        setLaunchTimer("微信");
+                        break;
+                    case 'p':
+                        setLaunchTimer("PDF Reader");
+                        break;
+                    case 'd':
+                        setLaunchTimer("豆瓣");
+                        break;
+                    default:
+                        break;
+                }
+            } else if (topLetter == '#') {
+                readyToOpen = false;
+                Toast.makeText(this, "The launch is cancelled", Toast.LENGTH_SHORT).show();
             }
+
         }
     }
 
@@ -459,9 +471,12 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
      * https://stackoverflow.com/questions/3872063/launch-an-application-from-another-application-on-android
      */
     private void launchActivityFromPackage(PInfo p) {
-        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(p.pname);
-        if (launchIntent != null) { //null pointer check in case package name was not found
-            startActivity(launchIntent);
+        if (readyToOpen) {
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(p.pname);
+            if (launchIntent != null) { //null pointer check in case package name was not found
+                startActivity(launchIntent);
+            }
+            readyToOpen = false;
         }
     }
 
@@ -499,6 +514,24 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     protected void onResume() {
         super.onResume();
 
+    }
+
+    void setLaunchTimer(final String appname) {
+        final PInfo pInfo = getPInfo(appname);
+        TimerTask task = new TimerTask(){
+            public void run(){
+                launchActivityFromPackage(pInfo);
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(task, 5000);
+        readyToOpen = true;
+        Toast toast = Toast.makeText(this, appname + " is going to launch in 5000ms, fbF to cancel.", Toast.LENGTH_LONG);
+        LinearLayout toastLayout = (LinearLayout) toast.getView();
+        ImageView imageView = new ImageView(this);
+        imageView.setImageDrawable(pInfo.icon);
+        toastLayout.addView(imageView, 0);
+        toast.show();
     }
 
 }
