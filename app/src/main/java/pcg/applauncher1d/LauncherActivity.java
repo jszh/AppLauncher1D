@@ -345,7 +345,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             if (strokes.size() > 0) {
                 logChar(false);
                 wordStrokes.add(new ArrayList<>(strokes));
-                getAppList();   // TODO
+                openApp();
             }
         }
         didDraw = false;
@@ -388,7 +388,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         if (!chars.isEmpty()) {
             if (shouldShowSuggestions) {
                 setLetterDisplay(chars.get(chars.size() - 1));
-                getAppList();   // TODO
+                openApp();
             }
         }
     }
@@ -408,14 +408,37 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     }
 
     // TODO
-    private void getAppList() {
-        ArrayList<String> apps;
-//        apps = appProvider.getApps(chars);
+    private void openApp() {
+        ArrayList<CostRecord> crs = chars.get(chars.size() - 1);
+        if(!crs.isEmpty()) {
+            char topChar = crs.get(0).getLetters().charAt(0);
+            Log.v(TAG, "Top Letter:" + topChar);
+
+            switch (topChar){
+                case 'w':
+                    launchActivityFromPackage(getPInfo("微信"));
+                    break;
+                case 'p':
+                    launchActivityFromPackage(getPInfo("PDF Reader"));
+                    break;
+                case 'd':
+                    launchActivityFromPackage(getPInfo("豆瓣"));
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
-
-
-
+    // search PInfo by app name
+    private PInfo getPInfo(String appname) {
+        for (PInfo pInfo : mPackages) {
+            if(pInfo.appname.equals(appname)){
+                return pInfo;
+            }
+        }
+        return mPackages.get(0);
+    }
 
 
     // Application package info
