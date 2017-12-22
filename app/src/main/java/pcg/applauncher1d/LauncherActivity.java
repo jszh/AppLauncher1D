@@ -182,6 +182,13 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
 
     @Override
     public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
+        float x1 = motionEvent.getX();
+        float x2 = motionEvent1.getX();
+//        Log.d(TAG, "Fling: " + String.valueOf(x1 - x2));
+        if ((x1 - x2 > 400) && readyToOpen) {
+            readyToOpen = false;
+            Toast.makeText(this, "The launch is cancelled", Toast.LENGTH_SHORT).show();
+        }
         return false;
     }
 
@@ -434,11 +441,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
                     default:
                         break;
                 }
-            } else if (topLetter == '#') {
-                readyToOpen = false;
-                Toast.makeText(this, "The launch is cancelled", Toast.LENGTH_SHORT).show();
             }
-
         }
     }
 
@@ -524,9 +527,9 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             }
         };
         Timer timer = new Timer();
-        timer.schedule(task, 5000);
+        timer.schedule(task, 1000);
         readyToOpen = true;
-        Toast toast = Toast.makeText(this, appname + " is going to launch in 5000ms, fbF to cancel.", Toast.LENGTH_LONG);
+        Toast toast = Toast.makeText(this, appname + " is going to launch in 1000 ms", Toast.LENGTH_LONG);
         LinearLayout toastLayout = (LinearLayout) toast.getView();
         ImageView imageView = new ImageView(this);
         imageView.setImageDrawable(pInfo.icon);
