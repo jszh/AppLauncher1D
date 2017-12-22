@@ -86,7 +86,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         // set UI layout
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_launcher);
-        mContentView = findViewById(R.id.dummy);
+//        mContentView = findViewById(R.id.dummy);
         gestureView = (GestureView) findViewById(R.id.gestureView);
 
         // setup 1D Handwriting
