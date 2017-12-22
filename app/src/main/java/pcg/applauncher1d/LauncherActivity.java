@@ -129,7 +129,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 Log.v(TAG, "up, " + currentEventT);
                 x2 = event.getX();
-                if ((x1 - x2 > 400)) {
+                if ((x1 - x2 > 150)) {
                     readyToOpen = false;
                     if(toast != null)
                         toast.cancel();
