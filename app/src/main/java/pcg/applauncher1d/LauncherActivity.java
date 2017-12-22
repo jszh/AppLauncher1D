@@ -81,9 +81,13 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
 
     private ArrayList<ArrayList<CostRecord>> chars = new ArrayList<>();
 
+    private Toast toast = null;
 
     private Letter letterGen;
 
+    // for cancel the launch
+    private float x1 = 0;
+    private float x2 = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,6 +128,15 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 Log.v(TAG, "up, " + currentEventT);
+                x2 = event.getX();
+                if ((x1 - x2 > 400)) {
+                    readyToOpen = false;
+                    if(toast != null)
+                        toast.cancel();
+                    toast = Toast.makeText(this, "Cancel launch task", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return true;
+                }
                 endLetter();
                 return true;
             }
@@ -134,6 +147,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     @Override
     public boolean onDown(MotionEvent motionEvent) {
         Log.v(TAG, "down, " + currentEventT);
+        x1 = motionEvent.getX();
         newSegment = true;
         retainedPoints.clear();
         retainedPoints.add(currentPoint);
@@ -182,13 +196,6 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
 
     @Override
     public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
-        float x1 = motionEvent.getX();
-        float x2 = motionEvent1.getX();
-//        Log.d(TAG, "Fling: " + String.valueOf(x1 - x2));
-        if ((x1 - x2 > 400) && readyToOpen) {
-            readyToOpen = false;
-            Toast.makeText(this, "The launch is cancelled", Toast.LENGTH_SHORT).show();
-        }
         return false;
     }
 
@@ -417,34 +424,42 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         }
 //        letterGroup.setContent(currentLetters, 0);
         Log.v(TAG, String.valueOf(currentLetters));
-
+        char topLetter = crs.get(0).getLetters().charAt(0);
+        String appname = getAppname(topLetter);
+        if(appname != null) {
+            PInfo pInfo = getPInfo(getAppname(topLetter));
+            if (toast != null) {
+                toast.cancel();
+            }
+            toast = new Toast(this);
+            ImageView imageView = new ImageView(this);
+            imageView.setImageDrawable(pInfo.icon);
+            toast.setView(imageView);
+            toast.show();
+        }
     }
 
-    // TODO
     private void openApp() {
         ArrayList<CostRecord> crs = chars.get(chars.size() - 1);
         if(!crs.isEmpty()) {
             char topLetter = crs.get(0).getLetters().charAt(0);
             Log.v(TAG, "Top Letter: " + topLetter);
-
-            if (readyToOpen == false) {
-                switch (topLetter){
-                    case 'w':
-                        setLaunchTimer("微信");
-                        break;
-                    case 'p':
-                        setLaunchTimer("PDF Reader");
-                        break;
-                    case 'd':
-                        setLaunchTimer("豆瓣");
-                        break;
-                    default:
-                        break;
-                }
-            }
+            setLaunchTimer(getAppname(topLetter));
         }
     }
 
+    private String getAppname(char c) {
+        switch (c){
+            case 'w':
+                return "微信";
+            case 'p':
+                return "PDF Reader";
+            case 'd':
+                return "豆瓣";
+            default:
+                return null;
+        }
+    }
     // search PInfo by app name
     private PInfo getPInfo(String appname) {
         for (PInfo pInfo : mPackages) {
@@ -520,6 +535,13 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     }
 
     void setLaunchTimer(final String appname) {
+        if (appname == null) {
+            if (toast != null)
+                toast.cancel();
+            toast = Toast.makeText(this, "No corresponding app", Toast.LENGTH_SHORT);
+            toast.show();
+            return;
+        }
         final PInfo pInfo = getPInfo(appname);
         TimerTask task = new TimerTask(){
             public void run(){
@@ -528,12 +550,10 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         };
         Timer timer = new Timer();
         timer.schedule(task, 1000);
+        if (toast != null)
+            toast.cancel();
         readyToOpen = true;
-        Toast toast = Toast.makeText(this, appname + " is going to launch in 1000 ms", Toast.LENGTH_LONG);
-        LinearLayout toastLayout = (LinearLayout) toast.getView();
-        ImageView imageView = new ImageView(this);
-        imageView.setImageDrawable(pInfo.icon);
-        toastLayout.addView(imageView, 0);
+        toast = Toast.makeText(this, appname + " is going to launch in 1000 ms", Toast.LENGTH_SHORT);
         toast.show();
     }
 
