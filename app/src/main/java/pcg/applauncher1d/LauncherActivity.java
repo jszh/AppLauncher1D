@@ -131,17 +131,23 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
                 x2 = event.getX();
                 if ((x1 - x2 > 150)) {
                     readyToOpen = false;
+                    discard();
                     if(toast != null)
                         toast.cancel();
-                    toast = Toast.makeText(this, "Cancel launch task", Toast.LENGTH_SHORT);
+                    toast = Toast.makeText(this, "App launch cancelled", Toast.LENGTH_SHORT);
                     toast.show();
                     return true;
                 }
                 endLetter();
                 return true;
             }
+
+            return super.onTouchEvent(event);
+
+        } else {
+            return true;
         }
-        return super.onTouchEvent(event);
+
     }
 
     @Override
@@ -203,11 +209,6 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     public void onShowPress(MotionEvent motionEvent) {
     }
 
-    private void setNewControlEvent() {
-        lastControlEventT = currentEventT;
-        retainedPoints.clear();
-    }
-
 
     /**
      * Gets the direction of current point in relation to the last point.
@@ -223,15 +224,6 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         return direction.nil;
     }
 
-    /**
-     * Did the user unintentionally scroll out of the touch pad?
-     *
-     * @return True if this point should be added to the last path
-     */
-    private boolean shouldContinue(Point point) {
-        double t = point.getT();
-        return (t - lastDrawnPoint.getT() < 0.1) && (t - lastDrawnPoint.getT() >= 0) && (Math.abs(lastDrawnPoint.getX() - point.getX()) < 50);
-    }
 
     // New character
     private void prepareForNewPath(Point point) {
@@ -348,7 +340,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     }
 
     private void logChar(boolean sel) {
-        long startTime, endTime;
+        long startTime;
         if (strokes.size() > 0) {
             startTime = (long) (strokes.get(0).getStartTime() * 1000);
         } else {
@@ -390,28 +382,6 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         setLetterDisplay(crs);
     }
 
-    /**
-     * Clears the current letter (if any) on letterGroup and wordGroup.
-     */
-    private void clearCurrent() {
-        if (!chars.isEmpty()) {
-            chars.remove(chars.size() - 1);
-            wordStrokes.remove(wordStrokes.size() - 1);
-        }
-
-        points.clear();
-        tempPoints.clear();
-        retainedPoints.clear();
-        gestureView.clearPath();
-        pathDidStart = false;
-
-        if (!chars.isEmpty()) {
-            if (shouldShowSuggestions) {
-                setLetterDisplay(chars.get(chars.size() - 1));
-                openApp();
-            }
-        }
-    }
 
 
     // Log the letters
@@ -428,9 +398,12 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         String appname = getAppname(topLetter);
         if(appname != null) {
             PInfo pInfo = getPInfo(getAppname(topLetter));
+
             if (toast != null) {
                 toast.cancel();
             }
+            if (pInfo == null) return;
+
             toast = new Toast(this);
             ImageView imageView = new ImageView(this);
             imageView.setImageDrawable(pInfo.icon);
@@ -467,7 +440,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
                 return pInfo;
             }
         }
-        return mPackages.get(0);
+        return null;
     }
 
 
@@ -542,7 +515,10 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             toast.show();
             return;
         }
+
         final PInfo pInfo = getPInfo(appname);
+        if (pInfo == null) return;
+
         TimerTask task = new TimerTask(){
             public void run(){
                 launchActivityFromPackage(pInfo);
@@ -553,7 +529,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         if (toast != null)
             toast.cancel();
         readyToOpen = true;
-        toast = Toast.makeText(this, appname + " is going to launch in 1000 ms", Toast.LENGTH_SHORT);
+        toast = Toast.makeText(this, "Launching " + appname, Toast.LENGTH_SHORT);
         toast.show();
     }
 
