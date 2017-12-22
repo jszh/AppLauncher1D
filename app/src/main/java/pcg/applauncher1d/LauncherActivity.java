@@ -18,11 +18,16 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import static android.content.ContentValues.TAG;
 
@@ -61,6 +66,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     private Point lastDrawnPoint = new Point(0, 0);
     private double virtualT = 0;
 
+    boolean readyToOpen = false;
     private boolean newSegment = true;
     private boolean pathDidStart = false;
     private boolean didDraw = false;
@@ -75,9 +81,13 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
 
     private ArrayList<ArrayList<CostRecord>> chars = new ArrayList<>();
 
+    private Toast toast = null;
 
     private Letter letterGen;
 
+    // for cancel the launch
+    private float x1 = 0;
+    private float x2 = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,7 +96,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         // set UI layout
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_launcher);
-        mContentView = findViewById(R.id.dummy);
+//        mContentView = findViewById(R.id.dummy);
         gestureView = (GestureView) findViewById(R.id.gestureView);
 
         // setup 1D Handwriting
@@ -118,6 +128,15 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 Log.v(TAG, "up, " + currentEventT);
+                x2 = event.getX();
+                if ((x1 - x2 > 150)) {
+                    readyToOpen = false;
+                    if(toast != null)
+                        toast.cancel();
+                    toast = Toast.makeText(this, "Cancel launch task", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return true;
+                }
                 endLetter();
                 return true;
             }
@@ -128,6 +147,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     @Override
     public boolean onDown(MotionEvent motionEvent) {
         Log.v(TAG, "down, " + currentEventT);
+        x1 = motionEvent.getX();
         newSegment = true;
         retainedPoints.clear();
         retainedPoints.add(currentPoint);
@@ -345,7 +365,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             if (strokes.size() > 0) {
                 logChar(false);
                 wordStrokes.add(new ArrayList<>(strokes));
-                getAppList();   // TODO
+                openApp();
             }
         }
         didDraw = false;
@@ -388,7 +408,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         if (!chars.isEmpty()) {
             if (shouldShowSuggestions) {
                 setLetterDisplay(chars.get(chars.size() - 1));
-                getAppList();   // TODO
+                openApp();
             }
         }
     }
@@ -404,18 +424,51 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         }
 //        letterGroup.setContent(currentLetters, 0);
         Log.v(TAG, String.valueOf(currentLetters));
-
+        char topLetter = crs.get(0).getLetters().charAt(0);
+        String appname = getAppname(topLetter);
+        if(appname != null) {
+            PInfo pInfo = getPInfo(getAppname(topLetter));
+            if (toast != null) {
+                toast.cancel();
+            }
+            toast = new Toast(this);
+            ImageView imageView = new ImageView(this);
+            imageView.setImageDrawable(pInfo.icon);
+            toast.setView(imageView);
+            toast.show();
+        }
     }
 
-    // TODO
-    private void getAppList() {
-        ArrayList<String> apps;
-//        apps = appProvider.getApps(chars);
+    private void openApp() {
+        ArrayList<CostRecord> crs = chars.get(chars.size() - 1);
+        if(!crs.isEmpty()) {
+            char topLetter = crs.get(0).getLetters().charAt(0);
+            Log.v(TAG, "Top Letter: " + topLetter);
+            setLaunchTimer(getAppname(topLetter));
+        }
     }
 
-
-
-
+    private String getAppname(char c) {
+        switch (c){
+            case 'w':
+                return "微信";
+            case 'p':
+                return "PDF Reader";
+            case 'd':
+                return "豆瓣";
+            default:
+                return null;
+        }
+    }
+    // search PInfo by app name
+    private PInfo getPInfo(String appname) {
+        for (PInfo pInfo : mPackages) {
+            if(pInfo.appname.equals(appname)){
+                return pInfo;
+            }
+        }
+        return mPackages.get(0);
+    }
 
 
     // Application package info
@@ -436,9 +489,12 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
      * https://stackoverflow.com/questions/3872063/launch-an-application-from-another-application-on-android
      */
     private void launchActivityFromPackage(PInfo p) {
-        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(p.pname);
-        if (launchIntent != null) { //null pointer check in case package name was not found
-            startActivity(launchIntent);
+        if (readyToOpen) {
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(p.pname);
+            if (launchIntent != null) { //null pointer check in case package name was not found
+                startActivity(launchIntent);
+            }
+            readyToOpen = false;
         }
     }
 
@@ -476,6 +532,29 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     protected void onResume() {
         super.onResume();
 
+    }
+
+    void setLaunchTimer(final String appname) {
+        if (appname == null) {
+            if (toast != null)
+                toast.cancel();
+            toast = Toast.makeText(this, "No corresponding app", Toast.LENGTH_SHORT);
+            toast.show();
+            return;
+        }
+        final PInfo pInfo = getPInfo(appname);
+        TimerTask task = new TimerTask(){
+            public void run(){
+                launchActivityFromPackage(pInfo);
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(task, 1000);
+        if (toast != null)
+            toast.cancel();
+        readyToOpen = true;
+        toast = Toast.makeText(this, appname + " is going to launch in 1000 ms", Toast.LENGTH_SHORT);
+        toast.show();
     }
 
 }
