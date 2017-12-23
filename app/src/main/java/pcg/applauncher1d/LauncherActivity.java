@@ -106,7 +106,27 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         // get a list of apps
         mPackages = getPackages();
 
+    }
 
+    /**
+     * Make the app appear on lock screen
+     */
+    @Override
+    public void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // do not respond to back button press
+    }
+
+    boolean shouldHandleGesture() {
+        float windowWidth = getWindow().getDecorView().getWidth();
+        return (x1 < windowWidth * 0.15 || x1 > windowWidth * 0.85);
     }
 
     /**
@@ -114,13 +134,17 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
      * @param event
      * @return true if this event is handled by 1D Handwriting
      */
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         currentEventT = event.getEventTime();
         currentPoint = new Point(-event.getY(), currentEventT / 1000d);
 
-        if (!mDetector.onTouchEvent(event)) {
+        boolean didHandle = mDetector.onTouchEvent(event);
+
+        if (!didHandle) {
+
+            // discard if not near window edge
+            if (!shouldHandleGesture()) return false;
 
             if (event.getAction() == MotionEvent.ACTION_MOVE) {
                 retainedPoints.add(currentPoint);
@@ -129,7 +153,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 Log.v(TAG, "up, " + currentEventT);
                 x2 = event.getX();
-                if ((x1 - x2 > 150)) {
+                if (Math.abs(x1 - x2) > 150) {
                     readyToOpen = false;
                     discard();
                     if(toast != null)
@@ -154,6 +178,8 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     public boolean onDown(MotionEvent motionEvent) {
         Log.v(TAG, "down, " + currentEventT);
         x1 = motionEvent.getX();
+        if (!shouldHandleGesture()) return false;
+
         newSegment = true;
         retainedPoints.clear();
         retainedPoints.add(currentPoint);
@@ -161,10 +187,9 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     }
 
     @Override
-    public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX,
-            float distanceY) {
-//        Log.d(TAG, "onScroll: " + event1.toString() + event2.toString());
-//        Log.d(TAG, currentPoint.getX() + "," + currentPoint.getT());
+    public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX, float distanceY) {
+
+        if (!shouldHandleGesture()) return false;
 
         if (currentEventT - lastControlEventT > 100) {
             if (newSegment) {
@@ -303,6 +328,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
      * @param point The point to which the line will be drawn.
      */
     private void drawLineTo(Point point) {
+
         float y = 234f - point.getX() / 6f;
         if (point.getT() - lastDrawnPoint.getT() > 0.05) {
             virtualT += 0.05f;
@@ -373,6 +399,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         tempPoints.clear();
         retainedPoints.clear();
         strokes.clear();
+        gestureView.clearPath();
     }
 
     private void updateLetters() {
@@ -392,7 +419,7 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
                 currentLetters.add(c.getLetters().substring(i, i + 1));
             }
         }
-//        letterGroup.setContent(currentLetters, 0);
+
         Log.v(TAG, String.valueOf(currentLetters));
         char topLetter = crs.get(0).getLetters().charAt(0);
         String appname = getAppname(topLetter);
@@ -517,7 +544,6 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
     @Override
     protected void onResume() {
         super.onResume();
-
     }
 
     void setLaunchTimer(final String appname) {
@@ -532,13 +558,16 @@ public class LauncherActivity extends AppCompatActivity implements GestureDetect
         final PInfo pInfo = getPInfo(appname);
         if (pInfo == null) return;
 
-        TimerTask task = new TimerTask(){
-            public void run(){
+        // use handler to delay running the app and clear gesture path (on UI thread)
+        Handler h = new Handler();
+        h.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                gestureView.clearPath();
                 launchActivityFromPackage(pInfo);
             }
-        };
-        Timer timer = new Timer();
-        timer.schedule(task, 700);
+        }, 700);
+
         if (toast != null)
             toast.cancel();
         readyToOpen = true;

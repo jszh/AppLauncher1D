@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg"
+    android:fitsSystemWindows="true"
     tools:context="pcg.applauncher1d.LauncherActivity">
 
     <!-- The primary full-screen view. This can be replaced with whatever view
@@ -19,7 +20,7 @@
             class="pcg.applauncher1d.GestureView"
             id="@+id/view"
             android:layout_width="wrap_content"
-            android:layout_height="300dp" />
+            android:layout_height="240dp" />
 
         <com.github.dewinjm.textclock.TextClock
             android:id="@+id/clock"
